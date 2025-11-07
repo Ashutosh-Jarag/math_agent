@@ -5,6 +5,10 @@ from dotenv import load_dotenv
 import os
 from backend.utils import kb_search, generate_with_gemini, web_search_fallback
 import re
+import csv
+from datetime import datetime
+from pathlib import Path
+from fastapi.middleware.cors import CORSMiddleware
 
 # ===============================================
 # Load environment variables
@@ -14,6 +18,19 @@ KB_THRESHOLD = float(os.getenv("KB_THRESHOLD", 0.78))
 KB_TOPK = int(os.getenv("KB_TOPK", 3))
 
 app = FastAPI(title="Math Routing Agent - Minimal")
+
+
+# ===============================================
+#  CORSMiddleware
+# ===============================================
+app.add_middleware(
+  CORSMiddleware,
+  allow_origins=["http://localhost:5173"],  # or ["*"] while testing
+  allow_credentials=True,
+  allow_methods=["*"],
+  allow_headers=["*"],
+)
+
 
 # ===============================================
 # Input/Output Schemas
@@ -28,6 +45,15 @@ class AskOut(BaseModel):
     final_answer: str
     sources: list[str]
     confidence: float
+
+# ==================================================
+# Feedback model
+# ==================================================
+class FeedbackIn(BaseModel):
+    user_id: str
+    question: str
+    feedback: str | None = None
+    rating: int  # expected 1–5
 
 # ===============================================
 # Guardrail Functions
@@ -217,6 +243,39 @@ def ask(req: AskIn):
         sources=[],
         confidence=round(float(conf), 3)
     )
+# ===============================================
+# Feedback endpoint
+# ===============================================
+FEEDBACK_FILE = Path("data/feedback_log.csv")
+FEEDBACK_FILE.parent.mkdir(exist_ok=True)
+
+@app.post("/feedback")
+def feedback(entry: FeedbackIn):
+    """
+    Store user feedback locally in a CSV file for later analysis/retraining.
+    """
+    if not (1 <= entry.rating <= 5):
+        raise HTTPException(status_code=400, detail="Rating must be between 1 and 5")
+
+    # append feedback to CSV
+    header = ["timestamp", "user_id", "question", "feedback", "rating"]
+    write_header = not FEEDBACK_FILE.exists()
+
+    with FEEDBACK_FILE.open("a", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        if write_header:
+            writer.writerow(header)
+        writer.writerow([
+            datetime.utcnow().isoformat(),
+            entry.user_id,
+            entry.question,
+            entry.feedback or "",
+            entry.rating
+        ])
+
+    return {"message": "✅ Feedback recorded successfully!"}
+
+
 
 # ===============================================
 # Root Endpoint
