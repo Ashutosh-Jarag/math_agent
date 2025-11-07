@@ -1,4 +1,4 @@
-# 🧮 Math Routing Agent
+# 🧮 Math Agent
 
 A full-stack **AI Math Assistant** that provides step-by-step solutions to math problems using advanced AI and vector search capabilities.
 
