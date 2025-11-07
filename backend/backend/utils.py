@@ -3,7 +3,7 @@ import os
 import requests
 from dotenv import load_dotenv
 from qdrant_client import QdrantClient
-
+import re
 # ===============================================
 # Load environment variables
 # ===============================================
@@ -86,43 +86,131 @@ def kb_search(query, top_k=3):
 # ===============================================
 # Text Generation Function
 # ===============================================
-def generate_with_gemini(prompt, max_tokens=512, temperature=0.2):
-    """
-    Calls the Gemini model and extracts clean text output.
-    """
-    import requests, json, os
-    API_KEY = os.getenv("GOOGLE_API_KEY")
-    model = os.getenv("GEMINI_GEN_MODEL", "gemini-2.0-flash")
+# def generate_with_gemini(prompt, max_tokens=512, temperature=0.2):
+#     """
+#     Calls the Gemini model and extracts clean text output.
+#     """
+#     import requests, json, os
+#     API_KEY = os.getenv("GOOGLE_API_KEY")
+#     model = os.getenv("GEMINI_GEN_MODEL", "gemini-2.0-flash")
 
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={API_KEY}"
+#     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={API_KEY}"
+#     headers = {"Content-Type": "application/json"}
+
+#     body = {
+#         "contents": [{"role": "user", "parts": [{"text": prompt}]}],
+#         "generationConfig": {"temperature": temperature, "maxOutputTokens": max_tokens}
+#     }
+
+#     resp = requests.post(url, headers=headers, json=body)
+#     if not resp.ok:
+#         print("❌ Gemini API Error:", resp.text)
+#         resp.raise_for_status()
+
+#     data = resp.json()
+
+#     # Try extracting clean text safely
+#     try:
+#         text = (
+#             data.get("candidates", [{}])[0]
+#             .get("content", {})
+#             .get("parts", [{}])[0]
+#             .get("text", "")
+#         )
+#     except Exception:
+#         text = str(data)
+
+#     # If still no text, fallback to legacy response structure
+#     if not text:
+#         text = data.get("output_text") or str(data)
+
+#     return text.strip()
+
+def generate_with_gemini(prompt, max_tokens=512, temperature=0.0, model=None):
+    """
+    Call Gemini and return a concise string containing only:
+      - numbered steps (1., 2., ...) and
+      - a final line starting with 'Final Answer:' or 'Answer:'.
+    Post-process to remove salutations and filler.
+    """
+    API_KEY = os.getenv("GOOGLE_API_KEY")
+    GEN_MODEL = model or os.getenv("GEMINI_GEN_MODEL", "gemini-2.5-flash")
+
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEN_MODEL}:generateContent?key={API_KEY}"
     headers = {"Content-Type": "application/json"}
 
+    # We add an extra instruction at the top of the prompt to force concise output
+    concise_directive = (
+        "INSTRUCTIONS (very important):\n"
+        "Return ONLY numbered steps and a single 'Final Answer:' line. "
+        "Do NOT include greetings, apologies, explanations about methodology, "
+        "or extra commentary. Use short clear sentences. Example:\n"
+        "you can start with just - Here is your solution:\n"
+        "1. Step one...\n2. Step two...\nFinal Answer: <expression>\n"
+    )
+    # combine
+    full_prompt = concise_directive + "\n\n" + prompt
+
     body = {
-        "contents": [{"role": "user", "parts": [{"text": prompt}]}],
-        "generationConfig": {"temperature": temperature, "maxOutputTokens": max_tokens}
+        "contents": [{"role": "user", "parts": [{"text": full_prompt}]}],
+        "generationConfig": {
+            "temperature": temperature,
+            "maxOutputTokens": max_tokens
+        }
     }
 
     resp = requests.post(url, headers=headers, json=body)
     if not resp.ok:
+        # preserve readable error
         print("❌ Gemini API Error:", resp.text)
         resp.raise_for_status()
 
     data = resp.json()
 
-    # Try extracting clean text safely
+    # SAFE extraction of text from response
+    text = ""
     try:
         text = (
             data.get("candidates", [{}])[0]
             .get("content", {})
             .get("parts", [{}])[0]
             .get("text", "")
-        )
+        ) or ""
     except Exception:
-        text = str(data)
+        text = ""
 
-    # If still no text, fallback to legacy response structure
+    # Fallbacks (older fields)
     if not text:
-        text = data.get("output_text") or str(data)
+        text = data.get("output_text") or data.get("text") or str(data)
 
-    return text.strip()
+    # ===== POST-PROCESSING: remove salutations/filler =====
+    # remove common greetings at the start
+    text = re.sub(r'^\s*(hi|hello|hey|dear student|i\'d be happy to help)[\.,!\s:-]*', '', text, flags=re.I)
+
+    # remove lines that are clearly filler like "Let's break it down" or "Problem:" at top
+    lines = [ln.rstrip() for ln in text.splitlines()]
+    filtered_lines = []
+    for ln in lines:
+        ln_strip = ln.strip()
+        # keep numbered steps or Final Answer lines, or math lines (containing = or ^ or / or numbers)
+        if re.match(r'^\d+\s*\.', ln_strip):  # numbered step
+            filtered_lines.append(ln_strip)
+        elif re.match(r'^(final answer|answer)\s*[:\-]', ln_strip, flags=re.I):
+            filtered_lines.append(ln_strip)
+        elif re.search(r'[=\^\*\/]|\\[a-z]+|\bC\b', ln_strip):  # likely math expression line
+            filtered_lines.append(ln_strip)
+        # else drop it (saves tokens)
+    # If nothing extracted, fall back to trying to salvage useful lines (very short)
+    if not filtered_lines:
+        # pick lines that look like math or are short
+        for ln in lines:
+            if len(ln.strip()) <= 120 and re.search(r'\d|\+|\-|\=|\^|/|\*', ln):
+                filtered_lines.append(ln.strip())
+        # final fallback: use the first 6 non-empty lines
+        if not filtered_lines:
+            filtered_lines = [ln.strip() for ln in lines if ln.strip()][:6]
+
+    result = "\n".join(filtered_lines).strip()
+    return result
+
 

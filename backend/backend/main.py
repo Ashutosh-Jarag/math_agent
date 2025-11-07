@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from dotenv import load_dotenv
 import os
 from backend.utils import kb_search, generate_with_gemini, web_search_fallback
+import re
 
 # ===============================================
 # Load environment variables
@@ -50,33 +51,70 @@ def output_guardrail(text: str) -> bool:
     banned_keywords = ["violence", "religion", "politics", "hack", "illegal", "suicide"]
     return not any(bad in text.lower() for bad in banned_keywords)
 
-def parse_generation_result(gen_result):
-    """
-    Parse Gemini output and standardize into (steps, final_answer, confidence).
-    """
-    if isinstance(gen_result, dict):
-        steps = gen_result.get("steps") or []
-        final = gen_result.get("final_answer") or ""
-        conf = float(gen_result.get("confidence", 0.5))
-        steps = [str(s) for s in steps] if steps else []
-        return steps, final, conf
+# def parse_generation_result(gen_result):
+#     """
+#     Parse Gemini output and standardize into (steps, final_answer, confidence).
+#     """
+#     if isinstance(gen_result, dict):
+#         steps = gen_result.get("steps") or []
+#         final = gen_result.get("final_answer") or ""
+#         conf = float(gen_result.get("confidence", 0.5))
+#         steps = [str(s) for s in steps] if steps else []
+#         return steps, final, conf
 
-    text = str(gen_result)
-    lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
+#     text = str(gen_result)
+#     lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
+#     steps = []
+#     final = ""
+#     for ln in lines:
+#         lowered = ln.lower()
+#         if "final answer" in lowered or ln.startswith("Answer:") or ln.startswith("Final:"):
+#             final = ln.split(":", 1)[1].strip() if ":" in ln else ln
+#         else:
+#             steps.append(ln)
+#     if not final and steps:
+#         candidate = steps[-1]
+#         if len(candidate.split()) <= 6:
+#             final = candidate
+#             steps = steps[:-1]
+#     return steps, final, 0.55
+
+def parse_generation_result(gen_text):
+    """
+    gen_text: string returned by generate_with_gemini (already post-processed concisely)
+    Returns (steps_list, final_answer, confidence)
+    """
+    if isinstance(gen_text, dict):
+        # If earlier versions return dict, handle it
+        txt = "\n".join(gen_text.get("steps", [])) if gen_text.get("steps") else str(gen_text)
+    else:
+        txt = str(gen_text)
+
+    lines = [ln.strip() for ln in txt.splitlines() if ln.strip()]
     steps = []
-    final = ""
+    final_answer = ""
     for ln in lines:
-        lowered = ln.lower()
-        if "final answer" in lowered or ln.startswith("Answer:") or ln.startswith("Final:"):
-            final = ln.split(":", 1)[1].strip() if ":" in ln else ln
-        else:
+        # numbered step
+        m = re.match(r'^(\d+)\s*[\.\)]\s*(.*)$', ln)
+        if m:
+            steps.append(m.group(2).strip())
+            continue
+        # final answer
+        m2 = re.match(r'^(final answer|answer)\s*[:\-]\s*(.*)$', ln, flags=re.I)
+        if m2:
+            final_answer = m2.group(2).strip()
+            continue
+        # if line looks like math expression, append as step if no numbered format
+        if re.search(r'[=\^\*/]|\\[a-z]+|\bC\b', ln):
             steps.append(ln)
-    if not final and steps:
-        candidate = steps[-1]
-        if len(candidate.split()) <= 6:
-            final = candidate
+    # If no explicit final found, try last line guess
+    if not final_answer and steps:
+        if re.match(r'^[A-Za-z0-9\-\+\/*\^\(\)\s\._]+$', steps[-1]) and len(steps[-1].split()) <= 8:
+            final_answer = steps[-1]
             steps = steps[:-1]
-    return steps, final, 0.55
+    # Confidence heuristic: if from KB we likely set it externally; else default 0.6
+    return steps, final_answer or "", 0.6
+
 
 # ===============================================
 # Main Endpoint
@@ -164,8 +202,8 @@ def ask(req: AskIn):
         Please attempt to solve it step-by-step using standard math rules.
         """
 
-    gen = generate_with_gemini(prompt)
-    steps, final_answer, conf = parse_generation_result(gen)
+    gen_text = generate_with_gemini(prompt, max_tokens=512, temperature=0.0)
+    steps, final_answer, conf = parse_generation_result(gen_text)
 
     if not output_guardrail(str(steps) + final_answer):
         raise HTTPException(
