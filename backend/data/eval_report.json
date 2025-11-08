@@ -1,8 +1,8 @@
 {
-  "total_tested": 1,
+  "total_tested": 3,
   "correct": 0,
   "accuracy_percent": 0.0,
-  "avg_response_time": 4.18,
+  "avg_response_time": 5.46,
   "results": [
     {
       "question": "Let m be the minimum possible value of log_3(3^{y1} + 3^{y2} + 3^{y3}), where y1, y2, y3 are real numbers such that y1 + y2 + y3 = 9. Let M be the maximum possible value of (log_3 x1 + log_3 x2 + log_3 x3), where x1, x2, x3 are positive real numbers with x1 + x2 + x3 = 9. Then find log_2(m^3) + log_3(M^2).",
@@ -10,7 +10,23 @@
       "ai_answer": "",
       "match": false,
       "match_reason": "empty-output",
-      "time_sec": 4.18
+      "time_sec": 4.81
+    },
+    {
+      "question": "The sides of a right-angled triangle are in arithmetic progression. If the triangle has area 24, what is the length of its smallest side?",
+      "correct_answer": "6",
+      "ai_answer": "",
+      "match": false,
+      "match_reason": "empty-output",
+      "time_sec": 5.94
+    },
+    {
+      "question": "Find the total number of distinct real x for which |x  x^2  1 + x^3; 2x  4x^2  1 + 8x^3; 3x  9x^2  1 + 27x^3| = 10.",
+      "correct_answer": "2",
+      "ai_answer": "",
+      "match": false,
+      "match_reason": "empty-output",
+      "time_sec": 5.64
     }
   ]
 }
