@@ -2,25 +2,28 @@
 
 A full-stack **AI Math Assistant** that provides step-by-step solutions to math problems using advanced AI and vector search capabilities.
 
+---
+
 ## 🌟 Overview
 
 This application combines **Google Gemini API**, **Qdrant Vector Database**, **FastAPI**, and **React** to create an intelligent math tutoring system that:
+
 - Retrieves relevant solutions from a knowledge base
 - Generates step-by-step explanations
 - Falls back to web search when needed
-- Learns from user feedback
+- Learns and improves from user feedback
 
 ---
 
 ## 🚀 Key Features
 
-✅ **Step-by-step explanations** for calculus, algebra, geometry, and more  
-✅ **Vector-based knowledge retrieval** using Qdrant  
-✅ **AI-powered reasoning** via Google Gemini  
-✅ **Web search fallback** for questions outside the knowledge base  
-✅ **User feedback system** with retraining capability  
-✅ **Modern React UI** with Tailwind CSS styling  
-✅ **Input/output guardrails** for math-specific queries  
+✅ Step-by-step solutions for calculus, algebra, geometry, and more  
+✅ Vector-based retrieval using Qdrant  
+✅ AI-powered reasoning via Google Gemini  
+✅ Web search fallback using Serper API  
+✅ User feedback loop with auto-retraining  
+✅ React + Tailwind frontend  
+✅ Math-only guardrails for input/output safety  
 
 ---
 
@@ -46,34 +49,42 @@ This application combines **Google Gemini API**, **Qdrant Vector Database**, **F
 ```
 math_agent/
 ├── backend/
-│   ├── main.py                 # FastAPI application
-│   ├── utils.py                # Helper functions (Gemini, Qdrant)
+│   ├── main.py                 # FastAPI entrypoint
+│   ├── utils/                  # Helper modules
+│   │   ├── core.py             # Gemini, Qdrant, embeddings
+│   │   ├── guardrails.py       # Input/output filters
+│   │   └── retraining.py       # Feedback-based retraining
+│   ├── routes/                 # Modular API routes
+│   │   ├── ask.py              # /ask endpoint
+│   │   └── feedback.py         # /feedback endpoint
+│   ├── models/                 # Pydantic schemas
+│   │   ├── ask_model.py
+│   │   └── feedback_model.py
 │   ├── scripts/
 │   │   ├── ingest_kb.py        # Ingest CSV into Qdrant
 │   │   ├── retrain_kb.py       # Retrain from feedback
-│   │   └── search_kb.py        # Test knowledge base search
+│   │   └── search_kb.py        # Test local search
 │   ├── data/
 │   │   └── math_kb.csv         # Knowledge base dataset
-│   ├── feedback_log.csv        # User feedback (auto-generated)
-│   ├── requirements.txt        # Python dependencies
-│   └── .env                    # Environment variables
+│   ├── requirements.txt
+│   └── .env
 │
 ├── frontend/
 │   ├── src/
-│   │   ├── App.jsx             # Main React component
-│   │   ├── main.jsx            # React entry point
-│   │   ├── api.js              # API service layer
-│   │   ├── styles.css          # Tailwind imports
+│   │   ├── App.jsx
+│   │   ├── main.jsx
+│   │   ├── api.js
+│   │   ├── styles.css
 │   │   └── components/
-│   │       ├── AskForm.jsx     # Question input form
-│   │       ├── AnswerCard.jsx  # Answer display
-│   │       └── FeedbackForm.jsx # Feedback submission
-│   ├── package.json            # Node dependencies
-│   ├── vite.config.js          # Vite configuration
-│   ├── tailwind.config.js      # Tailwind CSS config
-│   └── postcss.config.js       # PostCSS config
+│   │       ├── AskForm.jsx
+│   │       ├── AnswerCard.jsx
+│   │       └── FeedbackForm.jsx
+│   ├── package.json
+│   ├── vite.config.js
+│   ├── tailwind.config.js
+│   └── postcss.config.js
 │
-└── README.md                   # This file
+└── README.md
 ```
 
 ---
@@ -83,20 +94,20 @@ math_agent/
 ### Prerequisites
 
 - **Python 3.10+**
-- **Node.js 16+** and npm
+- **Node.js 16+**
 - **Docker** (for Qdrant)
-- **Google API Key** for Gemini ([Get it here](https://makersuite.google.com/app/apikey))
+- **Google API Key** ([Get one here](https://makersuite.google.com/app/apikey))
 
 ---
 
 ## 🔧 Backend Setup
 
-### 1. Create Python Virtual Environment
+### 1. Create Virtual Environment
 
 ```bash
 cd backend
 python3 -m venv myenv
-source myenv/bin/activate  # On Windows: myenv\Scripts\activate
+source myenv/bin/activate   # On Windows: myenv\Scripts\activate
 ```
 
 ### 2. Install Dependencies
@@ -105,52 +116,38 @@ source myenv/bin/activate  # On Windows: myenv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 3. Configure Environment Variables
-
-Create a `backend/.env` file:
+### 3. Create `.env`
 
 ```env
-GOOGLE_API_KEY=your_google_api_key_here
+GOOGLE_API_KEY=your_google_api_key
 QDRANT_URL=http://localhost:6333
 COLLECTION_NAME=math_kb
 GEMINI_EMBED_MODEL=embedding-001
 GEMINI_GEN_MODEL=gemini-2.5-flash
 KB_THRESHOLD=0.78
 KB_TOPK=3
-SERPER_API_KEY=your_serper_key_here  # Optional: for web search
+SERPER_API_KEY=your_serper_key  # optional
 ```
 
-### 4. Start Qdrant Vector Database
+### 4. Start Qdrant
 
 ```bash
 docker run -p 6333:6333 -v qdrant_storage:/qdrant/storage qdrant/qdrant
 ```
 
-**Expected output:**
-```
-Server started on 0.0.0.0:6333
-```
-
 ### 5. Ingest Knowledge Base
 
 ```bash
-cd backend
-source myenv/bin/activate
 python3 scripts/ingest_kb.py
 ```
 
-**Expected output:**
-```
-✅ Done ingesting KB into Qdrant.
-```
-
-### 6. Start Backend Server
+### 6. Start FastAPI Backend
 
 ```bash
 uvicorn main:app --reload
 ```
 
-**Access the API at:** [http://localhost:8000/docs](http://localhost:8000/docs)
+**Access API docs →** [http://localhost:8000/docs](http://localhost:8000/docs)
 
 ---
 
@@ -163,9 +160,7 @@ cd frontend
 npm install
 ```
 
-### 2. Configure Tailwind CSS
-
-Ensure these files exist:
+### 2. Configure Tailwind
 
 **tailwind.config.js:**
 ```javascript
@@ -176,45 +171,21 @@ export default {
 }
 ```
 
-**postcss.config.js:**
-```javascript
-export default {
-  plugins: {
-    tailwindcss: {},
-    autoprefixer: {},
-  },
-}
-```
-
-**src/styles.css:**
-```css
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-```
-
 ### 3. Start Development Server
 
 ```bash
 npm run dev
 ```
 
-**Access the app at:** [http://localhost:5173](http://localhost:5173)
+**Access app →** [http://localhost:5173](http://localhost:5173)
 
 ---
 
 ## 🎯 Usage
 
-### Asking a Question
-
-1. Open the frontend at `http://localhost:5173`
-2. Enter a math question (e.g., "Integrate 2x dx")
-3. Select explanation level: **Quick**, **Detailed**, or **Advanced**
-4. Click "Get Answer"
-
 ### Example API Request
 
-**Endpoint:** `POST /ask`
+**POST /ask**
 
 ```json
 {
@@ -224,7 +195,7 @@ npm run dev
 }
 ```
 
-**Response:**
+### Response
 
 ```json
 {
@@ -237,70 +208,63 @@ npm run dev
     "6. Combine: f'(x) = 3x² + 4x - 5"
   ],
   "final_answer": "f'(x) = 3x² + 4x - 5",
-  "sources": ["1"],
   "confidence": 0.95
 }
 ```
 
 ---
 
-## 🔄 Feedback & Retraining
+## 📸 Screenshots
 
-### Submit Feedback
+### 1. Home Page
+![Home Page](./screenshots/output1.png)
 
-Users can rate answers and provide corrections through the feedback form. Feedback is automatically saved to `backend/feedback_log.csv`.
+### 2. Ask Question Interface
+![Ask Question](./screenshots/output2.png)
 
-### Retrain Knowledge Base
+### 3. Step-by-Step Solution
+![Solution Display](./screenshots/output3.png)
 
-To incorporate valuable feedback into the knowledge base:
+### 4. Feedback Form
+![Feedback Form](./screenshots/output1.png)
 
-```bash
-cd backend
-source myenv/bin/activate
-python3 scripts/retrain_kb.py
-```
+### 5. API Documentation
+![API Docs](./screenshots/output2.png)
 
-This script:
-1. Reads high-quality feedback (rating ≥ 4)
-2. Adds new entries to Qdrant
-3. Updates the knowledge base
+### 6. Knowledge Base Visualization
+![KB Visualization](./screenshots/output3.png)
 
 ---
 
-## 🧪 Testing
+## 🔄 Feedback & Retraining
 
-### Test Knowledge Base Search
+User feedback is stored in `data/feedback_log.csv`.
+
+To retrain:
 
 ```bash
-cd backend
-python3 scripts/search_kb.py
+python3 scripts/retrain_kb.py
 ```
 
-Enter a query to see matching results from Qdrant.
-
-### API Testing
-
-Use the Swagger UI at [http://localhost:8000/docs](http://localhost:8000/docs) to test:
-- `/ask` - Ask math questions
-- `/feedback` - Submit feedback
-- `/health` - Check server status
+This:
+- Reads high-rated feedback (rating ≥ 4)
+- Embeds it
+- Adds it back into Qdrant
 
 ---
 
 ## 🚀 Quick Start After Reboot
 
-Whenever you restart your machine:
-
 ```bash
-# 1. Start Qdrant
+# Start Qdrant
 docker run -p 6333:6333 -v qdrant_storage:/qdrant/storage qdrant/qdrant
 
-# 2. Start Backend (in new terminal)
+# Start backend
 cd backend
 source myenv/bin/activate
 uvicorn main:app --reload
 
-# 3. Start Frontend (in new terminal)
+# Start frontend
 cd frontend
 npm run dev
 ```
@@ -309,109 +273,76 @@ npm run dev
 
 ## 📊 Knowledge Base Format
 
-The knowledge base (`data/math_kb.csv`) follows this structure:
+`math_kb.csv` example:
 
 ```csv
 id,question,final_answer,steps,tags
 1,"Differentiate f(x)=x^3","f'(x)=3x^2","1. Apply power rule...","calculus,derivative"
 ```
 
-**Fields:**
-- `id` - Unique identifier
-- `question` - Math problem
-- `final_answer` - Final result
-- `steps` - Step-by-step solution
-- `tags` - Category tags (comma-separated)
-
 ---
 
-## 🔒 Environment Variables Reference
+## 🔒 Environment Variables
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `GOOGLE_API_KEY` | Gemini API key | Required |
-| `QDRANT_URL` | Qdrant server URL | `http://localhost:6333` |
-| `COLLECTION_NAME` | Vector collection name | `math_kb` |
+| `GOOGLE_API_KEY` | Gemini API key | — |
+| `QDRANT_URL` | Qdrant endpoint | `http://localhost:6333` |
+| `COLLECTION_NAME` | Vector DB name | `math_kb` |
 | `GEMINI_EMBED_MODEL` | Embedding model | `embedding-001` |
 | `GEMINI_GEN_MODEL` | Generation model | `gemini-2.5-flash` |
-| `KB_THRESHOLD` | Similarity threshold | `0.78` |
-| `KB_TOPK` | Top results to retrieve | `3` |
-| `SERPER_API_KEY` | Web search API key | Optional |
+| `KB_THRESHOLD` | Similarity cutoff | `0.78` |
+| `KB_TOPK` | Top results | `3` |
+| `SERPER_API_KEY` | (optional) web search | — |
 
 ---
 
-## 🛡️ Features
+## 🛡️ Safety & Guardrails
 
 ### Input Guardrails
-- Validates math-related queries
-- Rejects harmful or irrelevant content
-- Ensures appropriate question format
+- Allows only math questions
+- Blocks irrelevant or unsafe content
 
 ### Output Guardrails
-- Filters AI-generated responses
-- Ensures step-by-step clarity
-- Validates mathematical correctness
-
-### Knowledge Base Retrieval
-- Vector similarity search via Qdrant
-- Configurable similarity threshold
-- Multiple result aggregation
-
-### Web Search Fallback
-- Activates when KB confidence is low
-- Uses Serper API for search
-- Integrates results into answer generation
+- Filters out non-math or unsafe answers
+- Keeps clean step-by-step output
 
 ---
 
-## 🐛 Troubleshooting
+## 🧰 Troubleshooting
 
-### Qdrant Connection Error
+### Port in Use
+
 ```bash
-# Check if Qdrant is running
-docker ps | grep qdrant
-
-# Restart Qdrant
-docker restart <container_id>
-```
-
-### Port Already in Use
-```bash
-# Backend (port 8000)
 lsof -ti:8000 | xargs kill -9
-
-# Frontend (port 5173)
 lsof -ti:5173 | xargs kill -9
 ```
 
 ### Missing Dependencies
-```bash
-# Backend
-pip install -r requirements.txt
 
-# Frontend
+```bash
+pip install -r requirements.txt
 npm install
+```
+
+### Qdrant Connection
+
+```bash
+docker ps | grep qdrant
+docker restart <container_id>
 ```
 
 ---
 
 ## 📚 Tech Stack
 
-**Backend:**
-- FastAPI - Modern Python web framework
-- Google Gemini - AI reasoning and embeddings
-- Qdrant - Vector similarity search
-- Pydantic - Data validation
-
-**Frontend:**
-- React 18 - UI framework
-- Vite - Build tool
-- Tailwind CSS - Styling
-- Axios - HTTP client
-
-**Infrastructure:**
-- Docker - Containerization
-- Uvicorn - ASGI server
+| Layer | Technology |
+|-------|-----------|
+| **Backend** | FastAPI, Pydantic, Requests |
+| **AI** | Google Gemini API |
+| **Vector DB** | Qdrant |
+| **Frontend** | React 18, Vite, Tailwind CSS |
+| **Infra** | Docker, Uvicorn |
 
 ---
 
@@ -429,15 +360,16 @@ Contributions are welcome! Please:
 
 ## 📝 License
 
-This project is licensed under the **MIT License** - see the LICENSE file for details.
+This project is licensed under the **MIT License**.
 
 ---
 
 ## 👨‍💻 Author
 
 **Ashutosh Jarag**  
-B.Tech in Computer Science @ Shivaji University, Kolhapur  
-Data Science & AI Enthusiast | Power BI | Python | FastAPI | React  
+🎓 B.Tech in Computer Science – Shivaji University, Kolhapur  
+💡 Data Science & AI Enthusiast | Python | FastAPI | React | Power BI  
+📧 jaragashutosh11@gmail.com  
 
 ---
 
@@ -447,14 +379,6 @@ Data Science & AI Enthusiast | Power BI | Python | FastAPI | React
 - Qdrant for vector search infrastructure
 - FastAPI community for excellent documentation
 - React and Tailwind CSS teams for frontend tools
-
----
-
-## 📞 Support
-
-For issues or questions:
-- Open an issue on GitHub
-- Contact: jaragashutosh11@gmail.com
 
 ---
 

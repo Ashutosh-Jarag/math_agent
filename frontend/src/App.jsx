@@ -44,7 +44,7 @@ export default function App() {
       </main>
 
       <footer>
-        <small>Built with Gemini + Qdrant • Local dev</small>
+        <small>Built for solving math problems</small>
       </footer>
     </div>
   );

@@ -1,0 +1,28 @@
+# Vectore search
+question 1:
+Find area of triangle with base 10 and height 6
+
+question 2:
+Differentiate f(x)=x^3 + 2x^2 - 5x
+
+question 3:
+Integrate ∫(2x) dx
+
+
+$ Globale search
+question 4:
+Find the Laplace transform of sin(2t)
+
+question 5:
+Find the inverse of matrix [[2, 1], [5, 3]]
+
+
+# out of scope
+write a poem
+
+
+tell me a joke
+
+
+Would you like me to show you next how to integrate this optimized DSPy program into your /ask route so your backend automatically uses it when available (and falls back to Gemini otherwise)?
+make sure my old code not harmed

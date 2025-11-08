@@ -1,0 +1,11 @@
+1. 
+
+docker ps
+
+2. 
+
+docker stop $(docker ps -q --filter ancestor=qdrant/qdrant)
+
+3. 
+
+docker run -p 6333:6333 -v qdrant_storage:/qdrant/storage qdrant/qdrant

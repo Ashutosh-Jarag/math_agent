@@ -1,0 +1,75 @@
+I’ll give you 3 versions:
+
+🔹 Short Summary (for resume bullets)
+
+🔸 Medium Description (for LinkedIn / GitHub intro)
+
+🔷 Detailed Project Description (for portfolio or report)
+
+🔹 1. Resume Summary (2–3 lines)
+
+AI Math Agent — Developed an intelligent math tutoring web application using FastAPI, React, and Google Gemini API. Integrated a Qdrant vector database for semantic retrieval and enabled step-by-step AI explanations, feedback-based learning, and web search fallback for unseen problems.
+
+Tech Stack: FastAPI · React.js · Qdrant · Gemini API · Python · TailwindCSS · Docker
+
+✅ Add this directly to your resume’s Projects section.
+
+🔸 2. LinkedIn / GitHub Description (medium-length)
+
+Math Agent is an AI-powered web application that provides step-by-step solutions to mathematical problems using Google Gemini API for reasoning and Qdrant for knowledge retrieval.
+It uses a hybrid approach — first searching a vectorized knowledge base for similar problems, then using AI generation when needed, and continuously improves through user feedback retraining.
+
+The system features:
+
+🧮 Math-only guardrails for safe, relevant responses
+
+⚡ FastAPI backend integrated with Gemini and Qdrant
+
+🌐 React + Tailwind frontend for smooth UX
+
+🔁 Feedback loop that enhances performance over time
+
+Tech Stack: FastAPI, React, Qdrant, Gemini API, Python, TailwindCSS, Docker
+
+Perfect for your LinkedIn “Projects” section or GitHub README intro.
+
+🔷 3. Detailed Portfolio / Report Description
+
+Project Title: AI-Powered Math Agent
+
+The Math Agent is an advanced AI-driven web application designed to assist students and professionals with mathematical problem-solving. It leverages Google Gemini’s generative reasoning capabilities to produce step-by-step explanations for calculus, algebra, and matrix operations.
+
+The backend, built with FastAPI, integrates a Qdrant Vector Database for semantic retrieval — allowing the system to fetch similar solved examples from a custom knowledge base (KB). When no close match exists, the system performs web search augmentation via the Serper API and generates answers contextually.
+
+A feedback module allows users to rate AI answers and contribute corrections, which are later processed by an automated retraining pipeline that expands the vector knowledge base.
+
+The frontend, built in React with TailwindCSS, offers an intuitive interface for asking questions, viewing AI-generated solutions, and submitting feedback.
+
+Key Functionalities:
+
+Step-by-step mathematical problem solving
+
+Knowledge base retrieval using vector similarity (Qdrant)
+
+AI reasoning and explanation via Gemini API
+
+User feedback with automatic KB retraining
+
+Input/output guardrails ensuring safe and math-focused interaction
+
+Dockerized deployment for scalability
+
+Tech Stack:
+
+Backend: FastAPI, Python, Qdrant, Google Gemini API, Serper API
+
+Frontend: React.js, TailwindCSS, Vite
+
+Infrastructure: Docker, Uvicorn
+
+Outcome:
+Achieved a robust, self-learning AI math assistant capable of producing accurate, structured, and pedagogical solutions while maintaining domain-specific safety and adaptability.
+
+Bonus — 🎓 1-line Portfolio Tagline
+
+“An AI-driven math tutor that learns from its users.”

@@ -1,8 +1,9 @@
 fastapi
-uvicorn[standard]
-qdrant-client
-requests
+uvicorn
 pydantic
 python-dotenv
+requests
 pandas
-tqdm
+qdrant-client
+dspy
+google-generativeai

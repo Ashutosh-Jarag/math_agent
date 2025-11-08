@@ -250,30 +250,36 @@ FEEDBACK_FILE = Path("data/feedback_log.csv")
 FEEDBACK_FILE.parent.mkdir(exist_ok=True)
 
 @app.post("/feedback")
-def feedback(entry: FeedbackIn):
-    """
-    Store user feedback locally in a CSV file for later analysis/retraining.
-    """
-    if not (1 <= entry.rating <= 5):
-        raise HTTPException(status_code=400, detail="Rating must be between 1 and 5")
-
-    # append feedback to CSV
-    header = ["timestamp", "user_id", "question", "feedback", "rating"]
-    write_header = not FEEDBACK_FILE.exists()
-
-    with FEEDBACK_FILE.open("a", newline="", encoding="utf-8") as f:
+def feedback(req: FeedbackIn):
+    """Store feedback and trigger retraining when enough positive feedback accumulates."""
+    os.makedirs(os.path.dirname(FEEDBACK_LOG), exist_ok=True)
+    
+    # ✅ 1. Append feedback to CSV
+    with open(FEEDBACK_LOG, "a", newline="") as f:
         writer = csv.writer(f)
-        if write_header:
-            writer.writerow(header)
         writer.writerow([
-            datetime.utcnow().isoformat(),
-            entry.user_id,
-            entry.question,
-            entry.feedback or "",
-            entry.rating
+            req.user_id,
+            req.question,
+            req.answer,
+            req.rating,
+            req.comment,
+            datetime.now().isoformat()
         ])
+    
+    # ✅ 2. Check if retraining needed
+    if os.path.exists(FEEDBACK_LOG):
+        df = pd.read_csv(FEEDBACK_LOG, names=["user_id","question","answer","rating","comment","timestamp"])
+        positive_count = len(df[df["rating"] >= 4])
+        if positive_count % RETRAIN_TRIGGER_COUNT == 0:
+            subprocess.Popen(
+                ["python3", "scripts/retrain_kb.py"],
+                stdout=open("retrain.log", "a"),
+                stderr=subprocess.STDOUT
+            )
+            return {"message": "✅ Feedback recorded. Retraining started automatically in background."}
 
-    return {"message": "✅ Feedback recorded successfully!"}
+    return {"message": "✅ Feedback recorded successfully."}
+
 
 
 
